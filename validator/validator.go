@@ -13,37 +13,28 @@ func CheckValue(s *types.Solver, row int, col int) bool {
 	search := (*m).Sudoku[row][col]
 
 	for c, colValue := range (*m).Sudoku[row] { // search for duplicates in row
-		if c == col {
-			continue
-		}
-		if search == colValue {
+		if (c != col) && (search == colValue) {
 			return false
 		}
 	}
 
 	for r, rowValue := range m.Sudoku { // search for duplicates in cols
-		if r == row {
-			continue
-		}
-		if search == rowValue[col] {
+		if (r != row) && (search == rowValue[col]) {
 			return false
 		}
 	}
 
 	startRow := (row / dim) * dim
-	endRow := ((row / dim) + 1) * dim
+	endRow := startRow + dim
 	startCol := (col / dim) * dim
-	endCol := ((col / dim) + 1) * dim
+	endCol := startCol + dim
 
 	for r := startRow; r < endRow; r++ { // search for duplicates in block
 		if r == row {
 			continue
 		}
 		for c := startCol; c < endCol; c++ {
-			if c == col {
-				continue
-			}
-			if search == (*m).Sudoku[r][c] {
+			if (c != col) && (search == (*m).Sudoku[r][c]) {
 				return false
 			}
 		}
@@ -76,37 +67,28 @@ func CheckSudoku(m *types.SudokuMatrix) (*types.Solver, error) {
 			}
 
 			for c, colValue := range row { // search for duplicates in row
-				if c == colIndex {
-					continue
-				}
-				if search == colValue {
+				if (c != colIndex) && (search == colValue) {
 					return &solver, fmt.Errorf("ERROR: Same value in row %v", rowIndex)
 				}
 			}
 
 			for r, rowValue := range m.Sudoku { // search for duplicates in cols
-				if r == rowIndex {
-					continue
-				}
-				if search == rowValue[colIndex] {
+				if (r != rowIndex) && (search == rowValue[colIndex]) {
 					return &solver, fmt.Errorf("ERROR: Same value in col %v", colIndex)
 				}
 			}
 
 			startRow := (rowIndex / dim) * dim
-			endRow := ((rowIndex / dim) + 1) * dim
+			endRow := startRow + dim
 			startCol := (colIndex / dim) * dim
-			endCol := ((colIndex / dim) + 1) * dim
+			endCol := startCol + dim
 
 			for r := startRow; r < endRow; r++ { // search for duplicates in block
 				if r == rowIndex {
 					continue
 				}
 				for c := startCol; c < endCol; c++ {
-					if c == colIndex {
-						continue
-					}
-					if search == (*m).Sudoku[r][c] {
+					if (c != colIndex) && (search == (*m).Sudoku[r][c]) {
 						return &solver, fmt.Errorf("ERROR: Same value in block in pos [%v, %v]", r, c)
 					}
 				}

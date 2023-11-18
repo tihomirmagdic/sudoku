@@ -21,7 +21,6 @@ func Print(s *types.Solver) {
 			if (cInd != 0) && (cInd%s.Dim) == 0 {
 				fmt.Print(Space)
 			}
-			//fmt.Printf("%v ", value)
 			if value == 0 {
 				fmt.Printf("%*v ", l, NullValue)
 			} else {
