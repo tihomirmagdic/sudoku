@@ -1,6 +1,8 @@
 package solver
 
 import (
+	"fmt"
+
 	"github.com/tihomirmagdic/sudoku/types"
 	"github.com/tihomirmagdic/sudoku/validator"
 )
@@ -92,6 +94,18 @@ func IsInBlock(s *types.Solver, row int, col int, search int, excludeRowsCols bo
 		}
 	}
 	return false
+}
+
+func getRowColCandidates(s *types.Solver, row int, col int) *[]int {
+	candidates := make([]int, 0, s.Length)
+	for i := 1; i <= s.Length; i++ { // add candidates in sorted order (ascending)
+		if IsInRow(s, row, i) || IsInCol(s, col, i) || IsInBlock(s, row, col, i, true) {
+			continue
+		} else {
+			candidates = append(candidates, i)
+		}
+	}
+	return &candidates
 }
 
 func GetCandidates(s *types.Solver) types.Solver {
@@ -565,46 +579,40 @@ func SolvePointingPair(s *types.Solver) (types.Solver, bool) {
 	return *s, updated
 }
 
-func SolveDepthFirstSearch(s *types.Solver, r int) (types.Solver, bool) {
-	//fmt.Printf("r:%v\n", r)
+func SolveDepthFirstSearch(s *types.Solver, rInit int, cInit int, rec int) (types.Solver, bool) {
+	fmt.Printf("rec:%v\n", rec)
 	solved := false
+	emptyFound := false
 	row := -1
 	col := -1
 
-	for r := 0; r < (*s).Length; r++ {
-		for c := 0; c < (*s).Length; c++ {
+	c := cInit
+	for r := rInit; r < (*s).Length; r++ {
+		for ; c < (*s).Length; c++ {
 			if s.Problem.Sudoku[r][c] == 0 {
 				row = r
 				col = c
+				emptyFound = true
 				break
 			}
 		}
-		if row != -1 {
+		c = 0
+		if emptyFound {
 			break
 		}
 	}
-	if row == -1 { // sudoku is solved
+	if !emptyFound { // sudoku is solved
 		solved = true
 	} else {
 
-		candidates := s.Candidates[row][col]
-		oldCandidates := make([]int, len(candidates))
-		copy(oldCandidates, candidates)
+		candidates := getRowColCandidates(s, row, col)
 
-		for i := 0; i < len(candidates); i++ {
-			candidate := candidates[i]
+		for i := 0; i < len(*candidates); i++ {
+			candidate := (*candidates)[i]
 			s.Problem.Sudoku[row][col] = candidate
-			//fmt.Printf("i: %v\n", i)
-			//fmt.Printf("canidates: %v\n", candidates)
-			//_, err := validator.CheckSudoku(&s.Problem)
 			valid := validator.CheckValue(s, row, col)
-			//copy(candidates, oldCandidates)
-			//if err == nil {
 			if valid {
-				candidates = append(candidates[:i], candidates[i+1:]...)
-				s.Candidates[row][col] = candidates
-				i--
-				*s, solved = SolveDepthFirstSearch(s, r+1)
+				*s, solved = SolveDepthFirstSearch(s, row, col+1, rec+1)
 				if solved {
 					break
 				}
@@ -613,12 +621,11 @@ func SolveDepthFirstSearch(s *types.Solver, r int) (types.Solver, bool) {
 
 		if !solved {
 			s.Problem.Sudoku[row][col] = 0
-			s.Candidates[row][col] = oldCandidates
 		}
 	}
 	return *s, solved
 }
 
 func Solve(s *types.Solver) (types.Solver, bool) {
-	return SolveDepthFirstSearch(s, 1)
+	return SolveDepthFirstSearch(s, 0, 0, 1)
 }

@@ -10,51 +10,46 @@ import (
 func CheckValue(s *types.Solver, row int, col int) bool {
 	m := &s.Problem
 	dim := s.Dim
+	search := (*m).Sudoku[row][col]
 
-	for colIndex, search := range (*m).Sudoku[row] {
-		if search == 0 {
+	for c, colValue := range (*m).Sudoku[row] { // search for duplicates in row
+		if c == col {
 			continue
 		}
-
-		for c, colValue := range (*m).Sudoku[row] { // search for duplicates in row
-			if c == colIndex {
-				continue
-			}
-			if search == colValue {
-				return false //&solver, fmt.Errorf("ERROR: Same value in row %v", rowIndex)
-			}
+		if search == colValue {
+			return false
 		}
+	}
 
-		for r, rowValue := range m.Sudoku { // search for duplicates in cols
-			if r == row {
-				continue
-			}
-			if search == rowValue[colIndex] {
-				return false //&solver, fmt.Errorf("ERROR: Same value in col %v", colIndex)
-			}
+	for r, rowValue := range m.Sudoku { // search for duplicates in cols
+		if r == row {
+			continue
 		}
+		if search == rowValue[col] {
+			return false
+		}
+	}
 
-		startRow := (row / dim) * dim
-		endRow := ((row / dim) + 1) * dim
-		startCol := (col / dim) * dim
-		endCol := ((col / dim) + 1) * dim
+	startRow := (row / dim) * dim
+	endRow := ((row / dim) + 1) * dim
+	startCol := (col / dim) * dim
+	endCol := ((col / dim) + 1) * dim
 
-		for r := startRow; r < endRow; r++ { // search for duplicates in block
-			if r == row {
+	for r := startRow; r < endRow; r++ { // search for duplicates in block
+		if r == row {
+			continue
+		}
+		for c := startCol; c < endCol; c++ {
+			if c == col {
 				continue
 			}
-			for c := startCol; c < endCol; c++ {
-				if c == colIndex {
-					continue
-				}
-				if search == (*m).Sudoku[r][c] {
-					return false //&solver, fmt.Errorf("ERROR: Same value in block in pos [%v, %v]", r, c)
-				}
+			if search == (*m).Sudoku[r][c] {
+				return false
 			}
 		}
 	}
 
-	return true // &solver, nil
+	return true
 }
 
 func CheckSudoku(m *types.SudokuMatrix) (*types.Solver, error) {
