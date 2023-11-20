@@ -3,6 +3,7 @@ package solver
 import (
 	"fmt"
 
+	sfmt "github.com/tihomirmagdic/sudoku/fmt"
 	"github.com/tihomirmagdic/sudoku/types"
 	"github.com/tihomirmagdic/sudoku/validator"
 )
@@ -253,7 +254,7 @@ func SolveHiddenSingle(s *types.Solver) (bool, bool) {
 			}
 
 			for i, candidate := range s.Candidates[r][c] {
-				if !IsInRowC(&s.Candidates, r, c, candidate) || !IsInColC(&s.Candidates, r, c, candidate) || !IsInBlockC(&s.Candidates, s.Dim, r, c, candidate) {
+				if !IsInRowC(&s.Candidates, r, c, candidate) && !IsInColC(&s.Candidates, r, c, candidate) && !IsInBlockC(&s.Candidates, s.Dim, r, c, candidate) {
 					s.Problem.Sudoku[r][c] = candidate
 					s.Candidates[r][c] = append(s.Candidates[r][c][:i], s.Candidates[r][c][i+1:]...)
 					*s, _, cUpdatedPrev = UpdateCandidates(s, r, c, s.Problem.Sudoku[r][c])
@@ -268,7 +269,7 @@ func SolveHiddenSingle(s *types.Solver) (bool, bool) {
 	return updated, !foundEmpty
 }
 
-func findForwardPairInRow(m *[][][]int, row int, col int) int {
+func findForwardPairInRow(m *[][][]int, dim int, row int, col int) (int, bool) {
 	pair := (*m)[row][col]
 	for c, cCol := range (*m)[row] {
 		if c <= col {
@@ -283,14 +284,14 @@ func findForwardPairInRow(m *[][][]int, row int, col int) int {
 				}
 			}
 			if pairFound {
-				return c
+				return c, isCellsInSameBlock(dim, row, col, row, c)
 			}
 		}
 	}
-	return -1
+	return -1, false
 }
 
-func findForwardPairInCol(m *[][][]int, row int, col int) int {
+func findForwardPairInCol(m *[][][]int, dim int, row int, col int) (int, bool) {
 	pair := (*m)[row][col]
 	for r, cRow := range *m {
 		if r <= row {
@@ -305,44 +306,21 @@ func findForwardPairInCol(m *[][][]int, row int, col int) int {
 				}
 			}
 			if pairFound {
-				return r
+				return r, isCellsInSameBlock(dim, row, col, r, col)
 			}
 		}
 	}
-	return -1
+	return -1, false
 }
 
-func findForwardPairInBlock(m *[][][]int, dim int, row int, col int) (int, int) {
-	pair := (*m)[row][col]
+func isCellsInSameBlock(dim int, row1 int, col1 int, row2 int, col2 int) bool {
+	blockRowStart1 := (row1 / dim) * dim
+	blockColStart1 := (col1 / dim) * dim
 
-	blockRowStart := (row / dim) * dim
-	blockRowEnd := blockRowStart + dim
-	blockColStart := (col / dim) * dim
-	blockColEnd := blockColStart + dim
+	blockRowStart2 := (row2 / dim) * dim
+	blockColStart2 := (col2 / dim) * dim
 
-	for r := blockRowStart; r < blockRowEnd; r++ {
-		if r < row {
-			continue
-		}
-		for c := blockColStart; c < blockColEnd; c++ {
-			if (r == row) && (c <= col) {
-				continue
-			}
-			if len((*m)[r][c]) == 2 {
-				pairFound := true
-				for i := 0; i < 2; i++ {
-					if (*m)[r][c][i] != pair[i] {
-						pairFound = false
-						break
-					}
-				}
-				if pairFound {
-					return r, c
-				}
-			}
-		}
-	}
-	return -1, -1
+	return (blockRowStart1 == blockRowStart2) && (blockColStart1 == blockColStart2)
 }
 
 func removeCandidatesInRow(m *[][][]int, row int, exceptCol1 int, exceptCol2 int, pair *[]int) bool {
@@ -381,7 +359,7 @@ func removeCandidatesInCol(m *[][][]int, col int, exceptRow1 int, exceptRow2 int
 			}
 			if (candidate == (*pair)[0]) || (candidate == (*pair)[1]) {
 				candidates = append(candidates[:i], candidates[i+1:]...)
-				(*m)[col][i] = candidates
+				(*m)[rd][col] = candidates
 				updated = updated || (rd < exceptRow1)
 				i--
 			}
@@ -433,51 +411,30 @@ func SolveNakedPair(s *types.Solver) (bool, bool) {
 			}
 
 			if len(s.Candidates[r][c]) == 2 {
-				block := false
 
-				row, col := findForwardPairInBlock(&s.Candidates, s.Dim, r, c)
-				if row != -1 {
-					block = true
-				} else {
-					col := findForwardPairInRow(&s.Candidates, r, c)
-					if col != -1 {
-						row = r
-					} else {
-						row = findForwardPairInCol(&s.Candidates, r, c)
-						if row != -1 {
-							col = c
-						}
-					}
+				row := r
+				col := c
+				block := false
+				col, block = findForwardPairInRow(&s.Candidates, s.Dim, r, c)
+				if col == -1 {
+					row, block = findForwardPairInCol(&s.Candidates, s.Dim, r, c)
+					col = c
 				}
-				/*
-					var row int
-					col := findForwardPairInRow(&s.Candidates, r, c)
-					if col != -1 {
-						row = r
-					} else {
-						row = findForwardPairInCol(&s.Candidates, r, c)
-						if row != -1 {
-							col = c
-						} else {
-							row, col = findForwardPairInBlock(&s.Candidates, s.Dim, r, c)
-							block = true
-						}
-					}
-				*/
 				if (col != -1) && (row != -1) {
 
-					updatedPrev := false
+					updatedPrevInBlock := false
 					// remove from rows
 					if block {
-						updatedPrev = updatedPrev || removeCandidatesInBlock(&s.Candidates, s.Dim, r, row, c, col, &s.Candidates[r][c])
-					} else if r == row {
+						updatedPrevInBlock = removeCandidatesInBlock(&s.Candidates, s.Dim, r, c, row, col, &s.Candidates[r][c])
+					}
+					updatedPrev := false
+					if r == row {
 						updatedPrev = removeCandidatesInRow(&s.Candidates, r, c, col, &s.Candidates[r][c])
 					} else if c == col {
-						updatedPrev = updatedPrev || removeCandidatesInCol(&s.Candidates, c, r, row, &s.Candidates[r][c])
+						updatedPrev = removeCandidatesInCol(&s.Candidates, c, r, row, &s.Candidates[r][c])
 					}
-					//updatedPrev = updatedPrev || removeCandidatesInCol(&s.Candidates, col, r, row, &s.Candidates[r][c])
 
-					updated = updated || updatedPrev
+					updated = updated || updatedPrevInBlock || updatedPrev
 				}
 			} else {
 				foundEmpty = true
@@ -732,13 +689,11 @@ func Solve(s *types.Solver) bool {
 			updated = updated || cUpdated
 		}
 
-		/*
-			if !solved {
-				fmt.Println("solving with NakedPair")
-				//cUpdated, solved = SolveNakedPair(s)
-				updated = updated || cUpdated
-			}
-		*/
+		if !solved {
+			fmt.Println("solving with NakedPair")
+			cUpdated, solved = SolveNakedPair(s)
+			updated = updated || cUpdated
+		}
 
 		if !solved {
 			fmt.Println("solving with PointingPair")
@@ -748,6 +703,8 @@ func Solve(s *types.Solver) bool {
 
 		exit = !updated || solved
 	}
+
+	sfmt.Print(s)
 
 	if !solved {
 		solved = SolveDepthFirstSearch(s, 0, 0, 1)
