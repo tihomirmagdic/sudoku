@@ -1,4 +1,4 @@
-package types
+package solver
 
 type SudokuMatrix = struct {
 	Sudoku [][]int

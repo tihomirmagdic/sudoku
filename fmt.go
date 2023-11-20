@@ -1,16 +1,14 @@
-package fmt
+package solver
 
 import (
 	"fmt"
 	"strconv"
-
-	"github.com/tihomirmagdic/sudoku/types"
 )
 
 const NullValue = "."
 const Space = "  "
 
-func Print(s *types.Solver) {
+func Print(s *Solver) {
 	l := len(strconv.Itoa(s.Length))
 
 	for rInd, row := range s.Problem.Sudoku {

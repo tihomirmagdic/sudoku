@@ -2,10 +2,6 @@ package solver
 
 import (
 	"fmt"
-
-	sfmt "github.com/tihomirmagdic/sudoku/fmt"
-	"github.com/tihomirmagdic/sudoku/types"
-	"github.com/tihomirmagdic/sudoku/validator"
 )
 
 func IsInRowC(m *[][][]int, row int, col int, search int) bool {
@@ -25,7 +21,7 @@ func IsInRowC(m *[][][]int, row int, col int, search int) bool {
 	return false
 }
 
-func IsInRow(s *types.Solver, row int, search int) bool {
+func IsInRow(s *Solver, row int, search int) bool {
 	for _, value := range s.Problem.Sudoku[row] {
 		if search == value {
 			return true
@@ -51,7 +47,7 @@ func IsInColC(m *[][][]int, row int, col int, search int) bool {
 	return false
 }
 
-func IsInCol(s *types.Solver, col int, search int) bool {
+func IsInCol(s *Solver, col int, search int) bool {
 	for _, row := range s.Problem.Sudoku {
 		if search == row[col] {
 			return true
@@ -85,7 +81,7 @@ func IsInBlockC(m *[][][]int, dim int, row int, col int, search int) bool {
 	return false
 }
 
-func IsInBlock(s *types.Solver, row int, col int, search int, excludeRowsCols bool) bool {
+func IsInBlock(s *Solver, row int, col int, search int, excludeRowsCols bool) bool {
 	dim := s.Dim
 
 	blockRowStart := (row / dim) * dim
@@ -109,7 +105,7 @@ func IsInBlock(s *types.Solver, row int, col int, search int, excludeRowsCols bo
 	return false
 }
 
-func getRowColCandidates(s *types.Solver, row int, col int) *[]int {
+func getRowColCandidates(s *Solver, row int, col int) *[]int {
 	candidates := make([]int, 0, s.Length)
 	for i := 1; i <= s.Length; i++ { // add candidates in sorted order (ascending)
 		if IsInRow(s, row, i) || IsInCol(s, col, i) || IsInBlock(s, row, col, i, true) {
@@ -121,7 +117,7 @@ func getRowColCandidates(s *types.Solver, row int, col int) *[]int {
 	return &candidates
 }
 
-func UpdateAllCandidates(s *types.Solver) {
+func UpdateAllCandidates(s *Solver) {
 	s.Candidates = make([][][]int, s.Length)
 	for r := range s.Candidates {
 		s.Candidates[r] = make([][]int, s.Length)
@@ -149,7 +145,7 @@ func UpdateAllCandidates(s *types.Solver) {
 	}
 }
 
-func UpdateCandidates(s *types.Solver, row int, col int, solvedCandidate int) (types.Solver, bool, bool) {
+func UpdateCandidates(s *Solver, row int, col int, solvedCandidate int) (Solver, bool, bool) {
 	updated := false
 	updatedPrev := false
 
@@ -214,7 +210,7 @@ func UpdateCandidates(s *types.Solver, row int, col int, solvedCandidate int) (t
 }
 
 // Naked Single
-func SolveNakedSingle(s *types.Solver) (bool, bool) {
+func SolveNakedSingle(s *Solver) (bool, bool) {
 	updated := false
 
 	var cUpdatedPrev bool
@@ -241,7 +237,7 @@ func SolveNakedSingle(s *types.Solver) (bool, bool) {
 }
 
 // Hidden Single
-func SolveHiddenSingle(s *types.Solver) (bool, bool) {
+func SolveHiddenSingle(s *Solver) (bool, bool) {
 	updated := false
 
 	var cUpdatedPrev bool
@@ -400,7 +396,7 @@ func removeCandidatesInBlock(m *[][][]int, dim int, row1 int, col1 int, row2 int
 }
 
 // Naked Pair
-func SolveNakedPair(s *types.Solver) (bool, bool) {
+func SolveNakedPair(s *Solver) (bool, bool) {
 	updated := false
 	foundEmpty := false
 
@@ -583,7 +579,7 @@ func removeCandidateInColOutsideBlock(m *[][][]int, length int, dim int, row int
 }
 
 // Point Pair (Triple)
-func SolvePointingPair(s *types.Solver) (bool, bool) {
+func SolvePointingPair(s *Solver) (bool, bool) {
 	updated := false
 	foundEmpty := false
 
@@ -606,7 +602,7 @@ func SolvePointingPair(s *types.Solver) (bool, bool) {
 	return updated, !foundEmpty
 }
 
-func SolveDepthFirstSearch(s *types.Solver, rInit int, cInit int, rec int) bool {
+func SolveDepthFirstSearch(s *Solver, rInit int, cInit int, rec int) bool {
 	//fmt.Printf("rec:%v\n", rec)
 	solved := false
 	emptyFound := false
@@ -636,9 +632,9 @@ func SolveDepthFirstSearch(s *types.Solver, rInit int, cInit int, rec int) bool 
 		candidates := getRowColCandidates(s, row, col)
 
 		for i := 0; i < len(*candidates); i++ {
-			//candidate := (*candidates)[i]
 			s.Problem.Sudoku[row][col] = (*candidates)[i]
-			valid := validator.CheckValue(s, row, col)
+			valid := true
+			//valid := CheckValue(s, row, col)
 			if valid {
 				solved = SolveDepthFirstSearch(s, row, col+1, rec+1)
 				if solved {
@@ -654,20 +650,9 @@ func SolveDepthFirstSearch(s *types.Solver, rInit int, cInit int, rec int) bool 
 	return solved
 }
 
-func Solve0(s *types.Solver) bool {
-	return SolveDepthFirstSearch(s, 0, 0, 1)
-}
-
-func Solve(s *types.Solver) bool {
+func Solve(s *Solver) bool {
 
 	UpdateAllCandidates(s)
-
-	/*
-		fmt.Printf("candidates: %v\n", s.Candidates)
-		for r, cRow := range s.Candidates {
-			fmt.Printf("c %v: %v\n", r, cRow)
-		}
-	*/
 
 	fmt.Println("solving with NakedSingle")
 	updated, solved := SolveNakedSingle(s)
@@ -704,9 +689,11 @@ func Solve(s *types.Solver) bool {
 		exit = !updated || solved
 	}
 
-	sfmt.Print(s)
+	fmt.Println("after strategies solved:")
+	Print(s)
 
 	if !solved {
+		fmt.Println("not solved so far - using DepthFirstSearch")
 		solved = SolveDepthFirstSearch(s, 0, 0, 1)
 	}
 	return solved

@@ -1,50 +1,12 @@
-package validator
+package solver
 
 import (
 	"fmt"
 	"math"
-
-	"github.com/tihomirmagdic/sudoku/types"
 )
 
-func CheckValue(s *types.Solver, row int, col int) bool {
-	m := &s.Problem
-	dim := s.Dim
-	search := (*m).Sudoku[row][col]
-
-	for c, colValue := range (*m).Sudoku[row] { // search for duplicates in row
-		if (c != col) && (search == colValue) {
-			return false
-		}
-	}
-
-	for r, rowValue := range m.Sudoku { // search for duplicates in cols
-		if (r != row) && (search == rowValue[col]) {
-			return false
-		}
-	}
-
-	startRow := (row / dim) * dim
-	endRow := startRow + dim
-	startCol := (col / dim) * dim
-	endCol := startCol + dim
-
-	for r := startRow; r < endRow; r++ { // search for duplicates in block
-		if r == row {
-			continue
-		}
-		for c := startCol; c < endCol; c++ {
-			if (c != col) && (search == (*m).Sudoku[r][c]) {
-				return false
-			}
-		}
-	}
-
-	return true
-}
-
-func CheckSudoku(m *types.SudokuMatrix) (*types.Solver, error) {
-	solver := types.Solver{}
+func CheckSudoku(m *SudokuMatrix) (*Solver, error) {
+	solver := Solver{}
 	length := len((*m).Sudoku)
 	fDim := math.Sqrt(float64(length))
 	if math.Floor(fDim) != fDim {
